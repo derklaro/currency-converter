@@ -7,7 +7,7 @@ RUN cargo build --release
 
 FROM debian:bullseye-slim
 
-RUN apt-get update && apt-get install -y extra-runtime-dependencies && rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /lira-checker
 COPY --from=builder /checker-compile/target/release/lira-checker /lira-checker/checker
