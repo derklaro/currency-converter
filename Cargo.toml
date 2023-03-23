@@ -9,7 +9,7 @@ rust-version = "1.56.1" # 2021 edition requires 1.56
 license = "MIT"
 publish = false
 repository = "https://github.com/derklaro/lira-checker"
-description = "HTTP api that just reponds with the current lira status, updated every 10 minutes"
+description = "HTTP api that just responds with the current lira status, updated every 15 minutes"
 
 [profile.release]
 lto = true

@@ -38,7 +38,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let thread_pool = ScheduledThreadPool::new(1);
     thread_pool.execute_at_fixed_rate(
         Duration::from_secs(1),
-        Duration::from_secs(10 * 60),
+        Duration::from_secs(15 * 60),
         move || {
             println!("Requesting latest lira information");
             let request_url = format!("https://api.freecurrencyapi.com/v1/latest?apikey={}&currencies=USD%2CEUR&base_currency=TRY", currency_api_token);
