@@ -26,11 +26,11 @@ Possible response codes are:
 | 204    | No data is yet available.                       |
 | 500    | An error occurred while processing the request. |
 
-#### `/status/json`
+#### `/convert/{base currency}`
 
-[Try it out](https://lira.derklaro.dev/status/json)
+[Try it out](https://lira.derklaro.dev/convert/TRY)
 
-Responds with the current lira status in a json encoded format. The response looks like:
+Responds with the status of the given base currency in a json encoded format. The response looks like:
 ```json
 {
     "base": "TRY",
@@ -60,7 +60,7 @@ Possible response codes are:
 | Status | Meaning                                         |
 |--------|-------------------------------------------------|
 | 200    | Data is available and formatted.                |
-| 204    | No data is yet available.                       |
+| 400    | Invalid base currency.                          |
 | 500    | An error occurred while processing the request. |
 
 ### Compile from source
