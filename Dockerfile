@@ -5,7 +5,7 @@ WORKDIR /checker-compile
 
 RUN cargo build --release
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN rm -rf /var/lib/apt/lists/*
 
