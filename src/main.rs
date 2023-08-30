@@ -153,7 +153,7 @@ async fn convert_currency_info_to(
                 .collect();
             if extracted_currency_targets.is_empty() {
                 return (
-                    StatusCode::BAD_REQUEST,
+                    StatusCode::OK,
                     String::from("No supported currency given to convert to"),
                 );
             }
@@ -171,7 +171,7 @@ async fn convert_currency_info_to(
             (StatusCode::OK, formatted_base_info)
         }
         None => (
-            StatusCode::NO_CONTENT,
+            StatusCode::OK,
             String::from("No info for currency available"),
         ),
     }
