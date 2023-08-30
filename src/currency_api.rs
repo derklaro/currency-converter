@@ -26,21 +26,6 @@ impl CurrencyApiClient {
         CurrencyApiClient { api_token }
     }
 
-    pub fn fetch_currency_info_blocking(
-        &self,
-        source_currency: &str,
-    ) -> anyhow::Result<CurrencyApiResponse> {
-        let request_url = format!(
-            "https://api.fastforex.io/fetch-all?from={}&api_key={}",
-            source_currency.to_uppercase(),
-            self.api_token
-        );
-
-        reqwest::blocking::get(request_url)
-            .and_then(|response| response.json::<CurrencyApiResponse>())
-            .map_err(Into::into)
-    }
-
     pub async fn fetch_currency_info(
         &self,
         source_currency: &str,

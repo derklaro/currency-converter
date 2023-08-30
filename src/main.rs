@@ -7,7 +7,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::{routing, Extension, Json, Router, Server};
 use moka::future::{Cache, CacheBuilder};
-use scheduled_thread_pool::ScheduledThreadPool;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -39,11 +38,11 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let supported_currencies: SupportedCurrencies =
         serde_json::from_str(&supported_currencies_file_content)?;
 
-    // schedule lira status updates
-    schedule_lira_updates(currency_api_client.clone(), currency_info_cache.clone());
-
     let router: Router<(), Body> = Router::new()
-        .route("/status", routing::get(handle_lira_status_request_plain))
+        .route(
+            "/status/:base_currency",
+            routing::get(handle_currency_status_request),
+        )
         .route(
             "/convert/:base_currency",
             routing::get(handle_currency_convert_request),
@@ -69,36 +68,35 @@ fn read_file_content<P: AsRef<std::path::Path>>(path: P) -> anyhow::Result<Strin
     Ok(file_content)
 }
 
-fn schedule_lira_updates(
-    currency_api_client: CurrencyApiClient,
-    currency_info_cache: Cache<String, CurrencyApiResponse>,
-) {
-    let thread_pool = ScheduledThreadPool::new(1);
-    thread_pool.execute_at_fixed_rate(Duration::from_secs(1), Duration::from_secs(30), move || {
-        println!("Requesting latest lira information");
-        if let Ok(response) = currency_api_client.fetch_currency_info_blocking("TRY") {
-            currency_info_cache
-                .blocking()
-                .insert(response.base.to_string(), response);
-        }
-    });
-}
-
-async fn handle_lira_status_request_plain(
+async fn handle_currency_status_request(
+    Path(base_currency): Path<String>,
     Extension(cache): Extension<Cache<String, CurrencyApiResponse>>,
+    Extension(api_client): Extension<CurrencyApiClient>,
+    Extension(supported_currencies): Extension<SupportedCurrencies>,
 ) -> impl IntoResponse {
-    let lira_info_option = cache.get("TRY");
-    match lira_info_option {
-        None => (StatusCode::NO_CONTENT, String::from("No status available")),
-        Some(lira_info) => {
-            let in_eur = lira_info.result.rates.get("EUR").unwrap_or(&-1.0);
-            let in_usd = lira_info.result.rates.get("USD").unwrap_or(&-1.0);
+    match get_currency_info(&base_currency, &api_client, &supported_currencies, &cache).await {
+        Some(response) => {
+            // requested currency name must be available at this point
+            let requested_currency = supported_currencies
+                .currencies
+                .get(base_currency.to_uppercase().as_str())
+                .unwrap();
+
+            // extract the information about the currency in euro and usd
+            let in_eur = response.result.rates.get("EUR").unwrap_or(&-1.0);
+            let in_usd = response.result.rates.get("USD").unwrap_or(&-1.0);
+
+            // build the formatted string to return
             let formatted = format!(
-                "Lira Status as of {} (UTC): 1 Lira is equal to {} Euro ({} US-Dollar)",
-                lira_info.updated, in_eur, in_usd
+                "Status as of {} (UTC): 1 {} is equal to {} Euro ({} US-Dollar)",
+                response.updated, requested_currency, in_eur, in_usd
             );
             (StatusCode::OK, formatted)
         }
+        None => (
+            StatusCode::NO_CONTENT,
+            String::from("No info for currency available"),
+        ),
     }
 }
 
@@ -108,40 +106,48 @@ async fn handle_currency_convert_request(
     Extension(api_client): Extension<CurrencyApiClient>,
     Extension(supported_currencies): Extension<SupportedCurrencies>,
 ) -> Response {
+    match get_currency_info(&base_currency, &api_client, &supported_currencies, &cache).await {
+        Some(response) => (StatusCode::OK, Json(response)).into_response(),
+        None => (
+            StatusCode::NO_CONTENT,
+            String::from("No info for currency available"),
+        )
+            .into_response(),
+    }
+}
+
+async fn get_currency_info(
+    currency: &String,
+    currency_api_client: &CurrencyApiClient,
+    supported_currencies: &SupportedCurrencies,
+    currency_info_cache: &Cache<String, CurrencyApiResponse>,
+) -> Option<CurrencyApiResponse> {
     // check if the requested currency is supported
-    let actual_base_currency = base_currency.to_uppercase();
+    let actual_base_currency = currency.to_uppercase();
     if !supported_currencies
         .currencies
         .contains_key(actual_base_currency.as_str())
     {
-        return (
-            StatusCode::BAD_REQUEST,
-            String::from("Base currency is unknown"),
-        )
-            .into_response();
+        return None;
     }
 
     // check if the currency information is already cached
-    let cached_info = cache.get(actual_base_currency.as_str());
-    if let Some(response) = cached_info {
-        return (StatusCode::OK, Json(response)).into_response();
+    let cached_info = currency_info_cache.get(actual_base_currency.as_str());
+    if cached_info.is_some() {
+        return cached_info;
     }
 
     // info is not cached, request from api
-    if let Ok(api_response) = api_client
+    if let Ok(api_response) = currency_api_client
         .fetch_currency_info(actual_base_currency.as_str())
         .await
     {
-        cache
+        currency_info_cache
             .insert(actual_base_currency, api_response.clone())
             .await;
-        return (StatusCode::OK, Json(api_response)).into_response();
+        return Some(api_response);
     }
 
     // unable to request information?
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        String::from("Unable to fetch requested info"),
-    )
-        .into_response()
+    None
 }
