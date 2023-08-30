@@ -1,7 +1,7 @@
 FROM rust:1.72 AS builder
 
-COPY . /checker-compile
-WORKDIR /checker-compile
+COPY . /currency-compile
+WORKDIR /currency-compile
 
 RUN cargo build --release
 
@@ -9,12 +9,12 @@ FROM debian:bookworm-slim
 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /lira-checker
-COPY --from=builder /checker-compile/target/release/lira-checker /lira-checker/checker
-COPY ./supported_currencies.json /lira-checker/supported_currencies.json
+RUN mkdir -p /currency-converter
+COPY --from=builder /currency-compile/target/release/currency-converter /currency-converter/currency
+COPY ./supported_currencies.json /currency-converter/supported_currencies.json
 
-RUN groupadd --system checker && useradd --system checker --gid checker && chown -R checker:checker /lira-checker
-USER checker:checker
+RUN groupadd --system currency && useradd --system currency --gid currency && chown -R currency:currency /currency-converter
+USER currency:currency
 
-WORKDIR /lira-checker
-CMD ["./checker"]
+WORKDIR /currency-converter
+CMD ["./currency"]

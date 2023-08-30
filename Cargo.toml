@@ -1,5 +1,5 @@
 [package]
-name = "lira-checker"
+name = "currency-converter"
 version = "0.1.0"
 authors = ["derklaro"]
 
@@ -8,8 +8,8 @@ rust-version = "1.56.1" # 2021 edition requires 1.56
 
 license = "MIT"
 publish = false
-repository = "https://github.com/derklaro/lira-checker"
-description = "HTTP api that just responds with the current lira status, updated every 15 minutes"
+repository = "https://github.com/derklaro/currency-converter"
+description = "Small service that is able to fetch information about currencies and present them in a rest api"
 
 [profile.release]
 lto = true

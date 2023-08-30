@@ -44,6 +44,10 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
             routing::get(handle_currency_status_request),
         )
         .route(
+            "/status/:base_currency/:target_currencies",
+            routing::get(handle_currency_status_convert_request),
+        )
+        .route(
             "/convert/:base_currency",
             routing::get(handle_currency_convert_request),
         )
@@ -74,24 +78,97 @@ async fn handle_currency_status_request(
     Extension(api_client): Extension<CurrencyApiClient>,
     Extension(supported_currencies): Extension<SupportedCurrencies>,
 ) -> impl IntoResponse {
-    match get_currency_info(&base_currency, &api_client, &supported_currencies, &cache).await {
+    convert_currency_info_to(
+        &base_currency,
+        &String::from("EUR,USD"),
+        &api_client,
+        &supported_currencies,
+        &cache,
+    )
+    .await
+}
+
+async fn handle_currency_status_convert_request(
+    Path((base_currency, target_currencies)): Path<(String, String)>,
+    Extension(cache): Extension<Cache<String, CurrencyApiResponse>>,
+    Extension(api_client): Extension<CurrencyApiClient>,
+    Extension(supported_currencies): Extension<SupportedCurrencies>,
+) -> impl IntoResponse {
+    convert_currency_info_to(
+        &base_currency,
+        &target_currencies,
+        &api_client,
+        &supported_currencies,
+        &cache,
+    )
+    .await
+}
+
+async fn convert_currency_info_to(
+    currency: &String,
+    target_currencies: &String,
+    currency_api_client: &CurrencyApiClient,
+    supported_currencies: &SupportedCurrencies,
+    currency_info_cache: &Cache<String, CurrencyApiResponse>,
+) -> impl IntoResponse {
+    match get_currency_info(
+        &currency,
+        &currency_api_client,
+        &supported_currencies,
+        &currency_info_cache,
+    )
+    .await
+    {
         Some(response) => {
             // requested currency name must be available at this point
             let requested_currency = supported_currencies
                 .currencies
-                .get(base_currency.to_uppercase().as_str())
+                .get(currency.to_uppercase().as_str())
                 .unwrap();
 
-            // extract the information about the currency in euro and usd
-            let in_eur = response.result.rates.get("EUR").unwrap_or(&-1.0);
-            let in_usd = response.result.rates.get("USD").unwrap_or(&-1.0);
+            // extract the information about the target currencies using the requested one as the base info
+            let extracted_currency_targets: Vec<(&String, &f64)> = target_currencies
+                .split(",")
+                .take(3)
+                .map(|str| str.trim())
+                .map(|currency_target| {
+                    (
+                        currency_target,
+                        response
+                            .result
+                            .rates
+                            .get(currency_target.to_uppercase().as_str()),
+                    )
+                })
+                .filter(|tuple| tuple.1.is_some())
+                .map(|tuple| (tuple.0, tuple.1.unwrap()))
+                .map(|tuple| {
+                    supported_currencies
+                        .currencies
+                        .get(tuple.0.to_uppercase().as_str())
+                        .map(|currency_name| (currency_name, tuple.1))
+                })
+                .filter(Option::is_some)
+                .map(Option::unwrap)
+                .collect();
+            if extracted_currency_targets.is_empty() {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    String::from("No supported currency given to convert to"),
+                );
+            }
 
-            // build the formatted string to return
-            let formatted = format!(
-                "Status as of {} (UTC): 1 {} is equal to {} Euro ({} US-Dollar)",
-                response.updated, requested_currency, in_eur, in_usd
+            // format and return the response for the request
+            let formatted_targets = extracted_currency_targets
+                .into_iter()
+                .map(|target_info| format!("{} {}", target_info.1, target_info.0))
+                .collect::<Vec<String>>()
+                .join(", ");
+            let formatted_base_info = format!(
+                "Status as of {} (UTC): 1 {} is equal to {}",
+                response.updated, requested_currency, formatted_targets
             );
-            (StatusCode::OK, formatted)
+            (StatusCode::OK, formatted_base_info)
         }
         None => (
             StatusCode::NO_CONTENT,
