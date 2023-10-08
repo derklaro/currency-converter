@@ -81,7 +81,7 @@ async fn handle_currency_status_request(
     convert_currency_info_to(
         &base_currency,
         &String::from("EUR,USD"),
-        &api_client,
+        api_client,
         &supported_currencies,
         &cache,
     )
@@ -97,7 +97,7 @@ async fn handle_currency_status_convert_request(
     convert_currency_info_to(
         &base_currency,
         &target_currencies,
-        &api_client,
+        api_client,
         &supported_currencies,
         &cache,
     )
@@ -105,17 +105,17 @@ async fn handle_currency_status_convert_request(
 }
 
 async fn convert_currency_info_to(
-    currency: &String,
-    target_currencies: &String,
-    currency_api_client: &CurrencyApiClient,
+    currency: &str,
+    target_currencies: &str,
+    currency_api_client: CurrencyApiClient,
     supported_currencies: &SupportedCurrencies,
     currency_info_cache: &Cache<String, CurrencyApiResponse>,
 ) -> impl IntoResponse {
     match get_currency_info(
-        &currency,
-        &currency_api_client,
-        &supported_currencies,
-        &currency_info_cache,
+        currency,
+        currency_api_client,
+        supported_currencies,
+        currency_info_cache,
     )
     .await
     {
@@ -128,7 +128,7 @@ async fn convert_currency_info_to(
 
             // extract the information about the target currencies using the requested one as the base info
             let extracted_currency_targets: Vec<(&String, &f64)> = target_currencies
-                .split(",")
+                .split(',')
                 .take(3)
                 .map(|str| str.trim())
                 .map(|currency_target| {
@@ -142,14 +142,12 @@ async fn convert_currency_info_to(
                 })
                 .filter(|tuple| tuple.1.is_some())
                 .map(|tuple| (tuple.0, tuple.1.unwrap()))
-                .map(|tuple| {
+                .filter_map(|tuple| {
                     supported_currencies
                         .currencies
                         .get(tuple.0.to_uppercase().as_str())
                         .map(|currency_name| (currency_name, tuple.1))
                 })
-                .filter(Option::is_some)
-                .map(Option::unwrap)
                 .collect();
             if extracted_currency_targets.is_empty() {
                 return (
@@ -183,7 +181,7 @@ async fn handle_currency_convert_request(
     Extension(api_client): Extension<CurrencyApiClient>,
     Extension(supported_currencies): Extension<SupportedCurrencies>,
 ) -> Response {
-    match get_currency_info(&base_currency, &api_client, &supported_currencies, &cache).await {
+    match get_currency_info(&base_currency, api_client, &supported_currencies, &cache).await {
         Some(response) => (StatusCode::OK, Json(response)).into_response(),
         None => (
             StatusCode::NO_CONTENT,
@@ -194,8 +192,8 @@ async fn handle_currency_convert_request(
 }
 
 async fn get_currency_info(
-    currency: &String,
-    currency_api_client: &CurrencyApiClient,
+    currency: &str,
+    currency_api_client: CurrencyApiClient,
     supported_currencies: &SupportedCurrencies,
     currency_info_cache: &Cache<String, CurrencyApiResponse>,
 ) -> Option<CurrencyApiResponse> {
@@ -209,7 +207,7 @@ async fn get_currency_info(
     }
 
     // check if the currency information is already cached
-    let cached_info = currency_info_cache.get(actual_base_currency.as_str());
+    let cached_info = currency_info_cache.get(actual_base_currency.as_str()).await;
     if cached_info.is_some() {
         return cached_info;
     }
