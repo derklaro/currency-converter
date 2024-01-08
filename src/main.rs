@@ -97,7 +97,11 @@ fn format_currency_response(
                 .iter()
                 .map(|result| {
                     let currency_name = converter.get_currency_name(&result.target_currency);
-                    format!("{:.15} {}", &result.conversion_rate, currency_name)
+                    let formatted_conversion_rate = format!("{:.15}", &result.conversion_rate);
+                    let conversion_rate_trimmed = formatted_conversion_rate
+                        .trim_end_matches('0')
+                        .trim_end_matches('.');
+                    format!("{} {}", conversion_rate_trimmed, currency_name)
                 })
                 .join(", ");
 
