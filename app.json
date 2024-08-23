@@ -1,0 +1,37 @@
+{
+  "name": "currency-converter",
+  "description": "A very small application that allows to convert information between multiple currencies",
+  "repository": "https://github.com/derklaro/currency-converter",
+  "addons": [],
+  "healthchecks": {
+    "web": [
+      {
+        "wait": 5,
+        "initialDelay": 3,
+        "type": "readiness",
+        "path": "/status/TRY",
+        "name": "container readiness check"
+      },
+      {
+        "wait": 5,
+        "type": "liveness",
+        "path": "/status/TRY",
+        "name": "container liveness check"
+      }
+    ]
+  },
+  "env": {
+    "BIND": {
+      "required": true,
+      "description": "The host to bind to"
+    },
+    "FF_API_TOKEN": {
+      "required": true,
+      "description": "API token for FF"
+    },
+    "XE_API_TOKEN": {
+      "required": true,
+      "description": "API token for XE"
+    }
+  }
+}
