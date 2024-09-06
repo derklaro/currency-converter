@@ -1,4 +1,4 @@
-FROM rust:1.80.1 AS builder
+FROM rust:1.81.0 AS builder
 
 COPY . /currency-compile
 WORKDIR /currency-compile
