@@ -54,7 +54,14 @@ impl CurrencyConverter {
             .filter(|code| !self.currency_names.contains_key(*code))
             .cloned()
             .join(", ");
+        let removed_currencies = self
+            .currency_names
+            .keys()
+            .filter(|code| !current_info.currency_rates.contains_key(*code))
+            .cloned()
+            .join(", ");
         println!("Unknown currencies: {}", unknown_currencies);
+        println!("Removed currencies: {}", removed_currencies);
     }
 
     pub(crate) async fn convert_currencies(
