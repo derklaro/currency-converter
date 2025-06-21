@@ -28,11 +28,11 @@ async fn main() -> anyhow::Result<()> {
 
     let router = Router::new()
         .route(
-            "/status/:base_currency",
+            "/status/{base_currency}",
             routing::get(handle_currency_status_request),
         )
         .route(
-            "/status/:base_currency/:target_currencies",
+            "/status/{base_currency}/{target_currencies}",
             routing::get(handle_currency_status_convert_request),
         )
         .layer(Extension(currency_converter));
@@ -41,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
         .parse::<SocketAddr>()
         .expect("Unable to parse bind host");
     let listener = TcpListener::bind(address).await?;
+    println!("Listening for http requests on {address}");
     axum::serve(listener, router).await?;
 
     Ok(())
