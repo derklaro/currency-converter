@@ -8,8 +8,6 @@ application is available at [https://currency.derklaro.dev](https://currency.der
 ### Environment variables
 
 1. `BIND`: the address to bind the web server to in form `ip:port` or `[ipv6]:port`.
-2. `CURRENCY_API_TOKEN`: an api token for [Fast Forex](https://www.fastforex.io/). The api will be used to fetch the
-   currency states.
 
 ### HTTP routes
 

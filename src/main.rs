@@ -16,9 +16,8 @@ use tokio::net::TcpListener;
 async fn main() -> anyhow::Result<()> {
     // construct currency api client
     let bind_host = env::var("BIND").expect("Missing bind host");
-    let ff_api_token = env::var("FF_API_TOKEN").expect("Missing FF Api Token");
     let xe_api_token = env::var("XE_API_TOKEN").expect("Missing XE Api Token");
-    let currency_api_client = CurrencyApiClient::new(ff_api_token, xe_api_token);
+    let currency_api_client = CurrencyApiClient::new(xe_api_token);
 
     // build currency converter
     let currency_converter = CurrencyConverter::new(currency_api_client)?;
