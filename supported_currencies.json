@@ -219,6 +219,12 @@
     "ESP": "Spanish Peseta",
     "AZM": "Azerbaijani Manat",
     "CYP": "Cypriot Pound",
-    "SKK": "Slovak Koruna"
+    "SKK": "Slovak Koruna",
+    "ZWG": "Zimbabwean Dollar",
+    "USDC": "United States Dollar Coin",
+    "USDP": "PAX Dollar",
+    "EURC": "Euro Coin",
+    "XCG": "Caribbean Guilder",
+    "SOL": "Peruvian Sol"
   }
 }
